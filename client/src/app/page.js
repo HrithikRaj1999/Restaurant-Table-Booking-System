@@ -1,9 +1,8 @@
 "use client";
-
 import { useState, useEffect } from "react";
 import TableSelectionModal from "@/modal-component/modal-component";
-import { FaSun, FaMoon, FaTimes } from "react-icons/fa";
-
+import useBooking from "@/hooks/useBooking";
+import useSeat from "@/hooks/useSeat";
 
 export default function Page() {
   const [formData, setFormData] = useState({
@@ -18,7 +17,16 @@ export default function Page() {
   const [darkMode, setDarkMode] = useState(false);
   const [validationError, setValidationError] = useState({});
   const [isModalOpen, setIsModalOpen] = useState(false);
-
+  const {
+    bookings,
+    loading,
+    error,
+    fetchBookings,
+    fetchBookingById,
+    createBooking,
+    deleteBooking,
+  } = useBooking();
+  const { seats, initializeSeats,} = useSeat();
   useEffect(() => {
     const savedTheme = localStorage.getItem("theme");
     if (savedTheme === "dark") {
@@ -33,9 +41,9 @@ export default function Page() {
   };
 
   const handleConfirm = (tables) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      selectedTables: tables
+      selectedTables: tables,
     }));
     setIsModalOpen(false);
   };
@@ -77,20 +85,26 @@ export default function Page() {
     return Object.keys(error).length === 0;
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (handleValidationErrors()) {
-      // Log the complete booking data
       console.log("Booking Details:", {
         date: formData.date,
         time: formData.time,
         guests: formData.guests,
         name: formData.name,
         contact: formData.contact,
-        tableId: formData.selectedTables[0] // Since we only allow one table
+        tableId: formData.selectedTables[0],
       });
-
+      await createBooking({
+        date: formData.date,
+        time: formData.time,
+        guests: formData.guests,
+        name: formData.name,
+        contact: formData.contact,
+        seatNumber: formData.selectedTables[0],
+      });
       // Reset form
       setFormData({
         date: "",
@@ -107,25 +121,21 @@ export default function Page() {
   return (
     <div
       className={`min-h-screen flex flex-col items-center justify-center p-4 ${
-        darkMode ? "bg-gray-900 text-white" : "bg-gradient-to-r from-blue-50 to-blue-100 text-gray-700"
+        darkMode
+          ? "bg-gray-900 text-white"
+          : "bg-gradient-to-r from-blue-50 to-blue-100 text-gray-700"
       }`}
     >
       {/* Dark mode toggle */}
-     <div className="absolute top-4 right-4">
-        <div
-          className="flex items-center justify-between w-16 h-8 bg-gray-200 dark:bg-gray-700 rounded-full p-1 cursor-pointer relative"
+      <div className="absolute top-4 right-4">
+        <button
           onClick={toggleDarkMode}
+          className={`p-2 rounded-lg ${
+            darkMode ? "bg-gray-800 text-yellow-400" : "bg-white text-gray-800"
+          }`}
         >
-          <div
-            className={`w-6 h-6 bg-white dark:bg-yellow-300 rounded-full shadow-md absolute transform transition-all duration-300 ${
-              darkMode ? "translate-x-8" : "translate-x-0"
-            }`}
-          >
-            <div className="flex items-center justify-center w-full h-full">
-              {darkMode ? <FaMoon className="text-gray-900" /> : <FaSun className="text-yellow-500" />}
-            </div>
-          </div>
-        </div>
+          {darkMode ? "🌙" : "☀️"}
+        </button>
       </div>
 
       <div
@@ -133,12 +143,20 @@ export default function Page() {
           darkMode ? "bg-gray-800" : "bg-white"
         }`}
       >
-        <h1 className={`text-2xl font-bold text-center mb-4 ${darkMode ? "text-white" : "text-gray-700"}`}>
+        <h1
+          className={`text-2xl font-bold text-center mb-4 ${
+            darkMode ? "text-white" : "text-gray-700"
+          }`}
+        >
           Restaurant Table Booking System
         </h1>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className={`block font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-600"}`}>
+            <label
+              className={`block font-medium mb-2 ${
+                darkMode ? "text-gray-300" : "text-gray-600"
+              }`}
+            >
               Date
             </label>
             <input
@@ -149,13 +167,23 @@ export default function Page() {
                   : "border-gray-300 text-gray-700 focus:ring-blue-400"
               }`}
               value={formData.date}
-              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, date: e.target.value })
+              }
             />
-            {validationError.date && <p className="text-red-500 text-sm mt-1">{validationError.date}</p>}
+            {validationError.date && (
+              <p className="text-red-500 text-sm mt-1">
+                {validationError.date}
+              </p>
+            )}
           </div>
 
           <div>
-            <label className={`block font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-600"}`}>
+            <label
+              className={`block font-medium mb-2 ${
+                darkMode ? "text-gray-300" : "text-gray-600"
+              }`}
+            >
               Time
             </label>
             <input
@@ -166,13 +194,23 @@ export default function Page() {
                   : "border-gray-300 text-gray-700 focus:ring-blue-400"
               }`}
               value={formData.time}
-              onChange={(e) => setFormData({ ...formData, time: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, time: e.target.value })
+              }
             />
-            {validationError.time && <p className="text-red-500 text-sm mt-1">{validationError.time}</p>}
+            {validationError.time && (
+              <p className="text-red-500 text-sm mt-1">
+                {validationError.time}
+              </p>
+            )}
           </div>
 
           <div>
-            <label className={`block font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-600"}`}>
+            <label
+              className={`block font-medium mb-2 ${
+                darkMode ? "text-gray-300" : "text-gray-600"
+              }`}
+            >
               Number of Guests
             </label>
             <input
@@ -183,14 +221,24 @@ export default function Page() {
                   : "border-gray-300 text-gray-700 focus:ring-blue-400"
               }`}
               value={formData.guests}
-              onChange={(e) => setFormData({ ...formData, guests: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, guests: e.target.value })
+              }
               placeholder="Enter number of guests"
             />
-            {validationError.guests && <p className="text-red-500 text-sm mt-1">{validationError.guests}</p>}
+            {validationError.guests && (
+              <p className="text-red-500 text-sm mt-1">
+                {validationError.guests}
+              </p>
+            )}
           </div>
 
           <div>
-            <label className={`block font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-600"}`}>
+            <label
+              className={`block font-medium mb-2 ${
+                darkMode ? "text-gray-300" : "text-gray-600"
+              }`}
+            >
               Name
             </label>
             <input
@@ -201,14 +249,24 @@ export default function Page() {
                   : "border-gray-300 text-gray-700 focus:ring-blue-400"
               }`}
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
               placeholder="Enter your name"
             />
-            {validationError.name && <p className="text-red-500 text-sm mt-1">{validationError.name}</p>}
+            {validationError.name && (
+              <p className="text-red-500 text-sm mt-1">
+                {validationError.name}
+              </p>
+            )}
           </div>
 
           <div>
-            <label className={`block font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-600"}`}>
+            <label
+              className={`block font-medium mb-2 ${
+                darkMode ? "text-gray-300" : "text-gray-600"
+              }`}
+            >
               Contact Number
             </label>
             <input
@@ -219,14 +277,24 @@ export default function Page() {
                   : "border-gray-300 text-gray-700 focus:ring-blue-400"
               }`}
               value={formData.contact}
-              onChange={(e) => setFormData({ ...formData, contact: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, contact: e.target.value })
+              }
               placeholder="Enter 10-digit number"
             />
-            {validationError.contact && <p className="text-red-500 text-sm mt-1">{validationError.contact}</p>}
+            {validationError.contact && (
+              <p className="text-red-500 text-sm mt-1">
+                {validationError.contact}
+              </p>
+            )}
           </div>
 
           <div>
-            <label className={`block font-medium mb-2 ${darkMode ? "text-gray-300" : "text-gray-600"}`}>
+            <label
+              className={`block font-medium mb-2 ${
+                darkMode ? "text-gray-300" : "text-gray-600"
+              }`}
+            >
               Table Selection
             </label>
             <div className="flex items-center justify-between">
@@ -246,14 +314,20 @@ export default function Page() {
               {formData.selectedTables.length > 0 && (
                 <button
                   type="button"
-                  onClick={() => setFormData({ ...formData, selectedTables: [] })}
+                  onClick={() =>
+                    setFormData({ ...formData, selectedTables: [] })
+                  }
                   className="text-red-500 hover:text-red-600 ml-2"
                 >
                   Clear Selection
                 </button>
               )}
             </div>
-            {validationError.tables && <p className="text-red-500 text-sm mt-1">{validationError.tables}</p>}
+            {validationError.tables && (
+              <p className="text-red-500 text-sm mt-1">
+                {validationError.tables}
+              </p>
+            )}
           </div>
 
           <button
